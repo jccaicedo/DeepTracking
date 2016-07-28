@@ -35,6 +35,7 @@ class Tracker(Tracker):
         self.objective = objective
         self.optimizer = optimizer
         self.rnnState = None
+        self.stateful = False
         
         # Functions
         self.buildModel()
@@ -116,8 +117,7 @@ class Tracker(Tracker):
         
         
     def getRnnState(self, batchSize, stateDim):
-        
-        if self.rnnState is None:
+        if self.rnnState is None or not self.stateful:
             self.rnnState = NP.zeros((batchSize, stateDim))
         
         return self.rnnState
@@ -126,3 +126,7 @@ class Tracker(Tracker):
     def reset(self):
         
         self.rnnState = None
+        
+    
+    def setStateful(self, stateful):
+        self.stateful = stateful
