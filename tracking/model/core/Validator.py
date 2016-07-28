@@ -65,3 +65,19 @@ class Validator(object):
     
     
         return result
+        
+        
+    def forwardByPart(self, tracker, frame, position):
+        seqLength = self.frame.shape[1]
+        targetDim = self.position.shape[2]
+        iters = seqLength / self.batchSize + (seqLength % self.batchSize > 0)
+        predPosition = NP.empty((seqLength, targetDim))
+        
+        for i in range(iters):
+            start = self.batchSize * (i)
+            end = self.batchSize * (i + 1)
+            frame = self.frame[:, start:end, ...]
+            position = position[start:end, 0, ...]
+            tracker.reset()
+            batchPredPosition = tracker.forward(frame, position)
+            predPosition = NP.append(predPosition, batchPredPosition, axis=0)        

@@ -5,9 +5,10 @@ Created on Mon Jun 27 12:14:44 2016
 @author: MindLab
 """
 
+import h5py
 from keras.models import Sequential
 from tracking.model.keras.Cnn import Cnn
-from keras.layers.core import Flatten, Dense, Dropout, Activation
+from keras.layers.core import Flatten, Dense, Dropout
 from keras.layers.convolutional import Convolution2D, MaxPooling2D, ZeroPadding2D
 
 class VggCnn(Cnn):
@@ -59,17 +60,26 @@ class VggCnn(Cnn):
         model.add(Dense(4096, activation='relu'))
         model.add(Dropout(0.5))
         model.add(Dense(4096, activation='relu'))
-        model.add(Dropout(0.5))
-        model.add(Dense(1000, activation='softmax'))
         
-        model.load_weights(modelPath)
-        model.layers.pop()
-        model.layers.pop()
-        model.params.pop()
-        model.params.pop()
+        model = self.loadWeights(model, modelPath)
         
         self.model = model
         
+        
+    def loadWeights(self, model, modelPath):
+        f = h5py.File(modelPath)
+        
+        for k in range(f.attrs['nb_layers']):
+            if k >= len(model.layers):
+                # we don't look at the last (fully-connected) layers in the savefile
+                break
+            g = f['layer_{}'.format(k)]
+            weights = [g['param_{}'.format(p)] for p in range(g.attrs['nb_params'])]
+            model.layers[k].set_weights(weights)
+        
+        f.close()
+        
+        return model
         
     def getOutputDim(self, inDims):
         outDims = self.model.output_shape

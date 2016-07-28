@@ -26,8 +26,8 @@ class GeneratorTrainer(Trainer):
     """
     Train a tracker.
 
-    @type  milestones: tracking.model.Tracker
-    @param milestones: The tracker to be trained
+    @type  epochs: tracking.model.Tracker
+    @param epochs: The tracker to be trained
     @type  batches: tracking.model.Tracker
     @param batches: The tracker to be trained
     @type  batchSize: tracking.model.Tracker
@@ -37,17 +37,23 @@ class GeneratorTrainer(Trainer):
     @type  lnrdy: tracking.model.Tracker
     @param lnrdy: The tracker to be trained
     """
-    def train(self, milestones, batches, batchSize, lnr, lnrdy):
-        for milst in range(milestones):
+    def train(self, epochs, batches, batchSize, lnr, lnrdy):
+        for epoch in range(epochs):
             for batch in range(batches):
-                frame, gtPosition = self.generator.getBatch(batchSize)
-                frame, prepGtPosition = self.processor.preprocess(frame, gtPosition)                
-                loss = self.tracker.fit(frame, prepGtPosition, lnr)              
-                self.validator.validateBatch(self.tracker, frame, prepGtPosition)
+                frame, position = self.getBatch(batchSize)
+                loss = self.tracker.fit(frame, position, lnr)
+                self.validator.validateBatch(self.tracker, frame, position)
                 
-                logging.info("Batch Loss: Milestone = %d, batch = %d, loss = %f", milst, batch, loss)
+                logging.info("Batch Loss: Milestone = %d, batch = %d, loss = %f", epoch, batch, loss)
             
             # Updating the learning rate
-            lnr *= lnrdy
-                
-            self.validator.validateEpoch(self.tracker)        
+            lnr = lnr * (1.0 / (1.0 + (lnrdy * epoch * batches + batch)))
+            
+            self.validator.validateEpoch(self.tracker)
+            
+            
+    def getBatch(self, batchSize):
+        frame, position = self.generator.getBatch(batchSize)
+        frame, position = self.processor.preprocess(frame, position)
+        
+        return frame, position

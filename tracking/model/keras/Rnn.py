@@ -40,6 +40,6 @@ class Rnn(Rnn):
     @type    stateful: boolean
     @param   stateful: stateful value
     """
-    def setStateful(self, trainable):
+    def setStateful(self, stateful):
         for layer in self.model.layers:
-            layer.trainable = trainable
+            layer.stateful = stateful

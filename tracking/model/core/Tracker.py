@@ -27,6 +27,37 @@ class Tracker(object):
     
     
     """
+    Train a tracker.
+
+    @type  epochs: tracking.model.Tracker
+    @param epochs: The tracker to be trained
+    @type  batches: tracking.model.Tracker
+    @param batches: The tracker to be trained
+    @type  batchSize: tracking.model.Tracker
+    @param batchSize: The tracker to be trained
+    @type  lnr: tracking.model.Tracker
+    @param lnr: The tracker to be trained
+    @type  lnrdy: tracking.model.Tracker
+    @param lnrdy: The tracker to be trained
+    """
+    def train(self, generator, epochs, batches, lnr, lnrdy, validator):
+        initLnr = lnr
+        
+        for epoch in range(epochs):
+            for batch in range(batches):
+                frame, position = next(generator)
+                loss = self.tracker.fit(frame, position, lnr)
+                validator.validateBatch(self.tracker, frame, position)
+                
+                logging.info("Batch Loss: Epoch = %d, batch = %d, loss = %f", epoch, batch, loss)
+            
+            # Updating the learning rate
+            lnr = initLnr * (1.0 / (1.0 + lnrdy * epoch))
+            
+            validator.validateEpoch(self.tracker)
+    
+    
+    """
     Make a forward process using a set of frames and positions.
 
     @type    frame: numpy.ndarray

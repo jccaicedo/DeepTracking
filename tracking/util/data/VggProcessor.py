@@ -13,6 +13,7 @@ class VggProcessor(Processor):
     
     def __init__(self, frameDims, positionModel):
         self.frameDims = frameDims
+        self.positionModel = positionModel
         self.mean = NP.array([103.939, 116.779, 123.68])[NP.newaxis, NP.newaxis, :, NP.newaxis, NP.newaxis]
     
     def preprocess(self, frame, position):
@@ -34,4 +35,4 @@ class VggProcessor(Processor):
         position = self.positionModel.toTwoCorners(position)
         position = Preprocess.rescalePosition(position, self.frameDims)
 
-        return position
+        return frame, position
