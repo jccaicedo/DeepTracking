@@ -40,6 +40,17 @@ class Rnn(Rnn):
     @type    stateful: boolean
     @param   stateful: stateful value
     """
-    def setStateful(self, stateful):
-        for layer in self.model.layers:
-            layer.stateful = stateful
+    def setStateful(self, stateful, batchSize):
+        cfg = self.getModel().get_config()
+        
+        for lay in cfg:
+            conf = lay["config"]
+            conf["stateful"] = stateful
+            inShape = conf["batch_input_shape"]
+            inShape = (batchSize, None, inShape[2])
+            conf["batch_input_shape"] = inShape
+            
+        model = Sequential.from_config(cfg)
+        weights = self.model.get_weights()
+        model.set_weights(weights)
+        self.model = model

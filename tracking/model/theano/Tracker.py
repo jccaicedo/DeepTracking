@@ -128,5 +128,5 @@ class Tracker(Tracker):
         self.rnnState = None
         
     
-    def setStateful(self, stateful):
+    def setStateful(self, stateful, batchSize):
         self.stateful = stateful

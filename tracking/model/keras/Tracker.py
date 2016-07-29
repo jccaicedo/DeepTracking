@@ -55,8 +55,8 @@ class Tracker(Tracker):
     @type    stateful: boolean
     @param   stateful: stateful value
     """
-    def setStateful(self, stateful):
-        self.rnn.setStateful(stateful)
+    def setStateful(self, stateful, batchSize):
+        self.rnn.setStateful(stateful, batchSize)
         
         self.buildModel(self.optimizer)
         
@@ -65,6 +65,10 @@ class Tracker(Tracker):
         history = LossHistory(validator, self)
         spe = batches * batchSize
         self.model.fit_generator(generator, nb_epoch=epochs, samples_per_epoch=spe, verbose=0, callbacks=[history])
+        
+        
+    def reset(self):
+        self.model.reset_states()
         
         
 class LossHistory(Callback):

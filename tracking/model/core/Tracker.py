@@ -79,7 +79,7 @@ class Tracker(object):
     @type    stateful: boolean
     @param   stateful: stateful value
     """
-    def setStateful(self, stateful):
+    def setStateful(self, stateful, batchSize):
         pass
     
     
