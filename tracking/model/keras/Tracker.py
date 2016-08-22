@@ -13,13 +13,14 @@ from tracking.model.core.Tracker import Tracker
 
 class Tracker(Tracker):
     
-    def __init__(self, cnn, rnn, regressor, frameDims, optimizer):
+    def __init__(self, cnn, rnn, regressor, frameDims, optimizer, loss):
         self.frameDims = frameDims
         self.cnn = cnn
         self.rnn = rnn
         self.regressor = regressor
         self.optimizer = optimizer
-        self.buildModel(optimizer)
+        self.loss = loss
+        self.buildModel()
     
     
     def fit(self, frame, position, lnr):
@@ -34,7 +35,7 @@ class Tracker(Tracker):
         return position
     
     
-    def buildModel(self, optimizer):
+    def buildModel(self):
         model = Sequential()
         cnn = TimeDistributed(self.cnn.getModel(), input_shape=(None, ) + self.frameDims)
         rnn = self.rnn.getModel()
@@ -42,7 +43,7 @@ class Tracker(Tracker):
         model.add(cnn)
         model.add(rnn)
         model.add(reg)
-        model.compile(optimizer=self.optimizer, loss='mse')
+        model.compile(optimizer=self.optimizer, loss=self.loss)
         
         self.model = model
         
@@ -58,7 +59,7 @@ class Tracker(Tracker):
     def setStateful(self, stateful, batchSize):
         self.rnn.setStateful(stateful, batchSize)
         
-        self.buildModel(self.optimizer)
+        self.buildModel()
         
         
     def train(self, generator, epochs, batches, batchSize, validator):

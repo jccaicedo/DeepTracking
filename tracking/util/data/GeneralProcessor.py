@@ -2,10 +2,9 @@
 """
 Created on Fri Jul  1 18:12:33 2016
 
-@author: MindLab
+@author: MindLAB
 """
 
-import numpy as NP
 import tracking.util.data.Preprocess as Preprocess
 from tracking.model.core.Processor import Processor
 
@@ -36,21 +35,3 @@ class GeneralProcessor(Processor):
         position = Preprocess.rescalePosition(position, self.frameDims)
 
         return frame, position
-  
-    
-class TransformationProcessor(Processor):
-    
-    def __init__(self, frameDims):
-        self.frameDims = frameDims
-    
-    def preprocess(self, frame, position):
-        frame = frame.transpose(0, 1, 4, 2, 3)
-        frame = Preprocess.scaleFrame(frame)
-        position = NP.diff(position, axis=1)
-        return frame, position
-
-    
-    def postprocess(self, position):
-        position = Preprocess.rescalePosition(position, self.frameDims)
-
-        return position

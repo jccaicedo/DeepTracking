@@ -20,11 +20,12 @@ class TwoCornersPM(PositionModel):
         return position
     
     
-    # position.shape = (batchSize, seqLength, targetDim(xC, yC, height, width))
+    # position.shape = (batchSize, seqLength, targetDim(x1, y1, x2, y2))
     def toTwoCorners(self, position):
         
         return position
     
+        
     """
     Plot (in side) the position in a frame. 
 

@@ -10,6 +10,7 @@ import random
 import numpy as NP
 import cPickle as pickle
 import scipy.misc as SCPM
+import matplotlib.pyplot as PLT
 import tracking.util.data.Preprocess as Preprocess
 from PIL import Image
 
@@ -77,3 +78,21 @@ def loadDataset(path):
     dataSetFile.close()
     
     return frame, position
+    
+
+def plotResults(measures, measureName):
+    cols = 2
+    rows = len(measures) / cols + (len(measures) % cols > 0)
+    f, axs = PLT.subplots(rows, cols, figsize=(20, 28))
+    axs = axs.ravel()
+    i = 0
+    for name, values in measures.iteritems():
+        ax = axs[i]
+        ax.plot(values[0, ...])
+        value = str(values[0, ...].mean())
+        title = "{}, {} {} = {}".format(name, measureName, "Mean", value)
+        ax.set_title(title)
+        ax.set_xlabel("frame")
+        ax.set_ylabel(measureName)
+        print title
+        i += 1

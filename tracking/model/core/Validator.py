@@ -2,7 +2,7 @@
 """
 Created on Thu Apr 14 10:55:29 2016
 
-@author: MindLab
+@author: MindLAB
 """
 
 import logging

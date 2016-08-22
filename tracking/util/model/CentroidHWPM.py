@@ -17,24 +17,14 @@ class CentroidHWPM(PositionModel):
         
     # position.shape = (batchSize, seqLength, targetDim(x1, y1, x2, y2))
     def fromTwoCorners(self, position):
-        x1 = position[:, :, 0]
-        y1 = position[:, :, 1]
-        x2 = position[:, :, 2]
-        y2 = position[:, :, 3]
+        batchSize, seqLength, targetDim = position.shape
+        position = position.reshape((batchSize, seqLength, 2, 2))
+        centroid = NP.sum(position, axis=2) / 2.0
+        hw = NP.abs(NP.diff(position, axis=2)[:,:,0,:])
+        chw = NP.concatenate((centroid, hw), axis=2)
+        chw[:, :, [2, 3]] = chw[:, :, [3, 2]] # Changing from cwh to chw
         
-        w = NP.abs(x2 - x1)
-        h = NP.abs(y2 - y1)
-        xCenter = x1 + w / 2.0
-        yCenter = y1 + h / 2.0
-        
-        newPosition = NP.copy(position)
-        
-        newPosition[:, :, 0] = xCenter
-        newPosition[:, :, 1] = yCenter
-        newPosition[:, :, 2] = h
-        newPosition[:, :, 3] = w
-        
-        return newPosition
+        return chw
     
     
     # position.shape = (batchSize, seqLength, targetDim(xC, yC, height, width))
