@@ -10,14 +10,14 @@ import numpy.linalg as NLA
 from keras.models import Sequential
 from keras.layers import InputLayer
 from tracking.model.core.Processor import Processor
-from tracking.model.keras.Transformer import Transformer
+from tracking.model.keras.SpatialTransformer import SpatialTransformer
 from tracking.util.model.CentroidHWPM import CentroidHWPM
 
 
 class Cropper(Processor):
     
-    def __init__(self, frameDims, batchSize, context, positionModel, distorsion):
-        self.transformer = self.createTransformer(frameDims, batchSize)
+    def __init__(self, frameDims, context, positionModel, distorsion):
+        self.transformer = self.createTransformer(frameDims)
         self.context = context
         self.positionModel = positionModel
         self.chwPM = CentroidHWPM()
@@ -57,8 +57,8 @@ class Cropper(Processor):
         dy = NP.random.uniform(-self.distorsion, self.distorsion, size=(samples))
         cX = chw[:, 0] + dx
         cY = chw[:, 1] + dy
-        h = chw[:, 2] * self.context + self.distorsion
-        w = chw[:, 3] * self.context + self.distorsion
+        h = chw[:, 2] * self.context + 0.01
+        w = chw[:, 3] * self.context + 0.01
         maxW = 1.0-NP.abs(cX)
         maxH = 1.0-NP.abs(cY)
         
@@ -78,7 +78,7 @@ class Cropper(Processor):
         return theta[:, :2, :], NLA.inv(theta)[:, :2, :]
         
         
-    def createTransformer(self, frameDims, batchSize):
+    def createTransformer(self, frameDims):
         thetaModel = Sequential()
         thetaModel.add(InputLayer(input_shape=(2, 3)))
         
@@ -86,7 +86,7 @@ class Cropper(Processor):
         frameModel.add(InputLayer(input_shape=frameDims))
         
         transformer = Sequential()
-        transformer.add(Transformer([frameModel, thetaModel], 1.))
+        transformer.add(SpatialTransformer([frameModel, thetaModel], 1.))
         transformer.compile(optimizer="rmsprop", loss='mse')
         
         return transformer

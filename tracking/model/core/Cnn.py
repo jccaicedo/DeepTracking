@@ -2,7 +2,7 @@
 """
 Created on Fri Apr 15 12:12:47 2016
 
-@author: MindLab
+@author: MindLAB
 """
 
 class Cnn(object):

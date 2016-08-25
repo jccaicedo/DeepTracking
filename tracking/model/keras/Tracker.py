@@ -6,21 +6,16 @@ Created on Tue Jun 28 18:09:36 2016
 """
 
 import logging
-from keras.models import Sequential
 from keras.callbacks import Callback
-from keras.layers.wrappers import TimeDistributed
+from keras.layers import Input
+from keras.models import Model
 from tracking.model.core.Tracker import Tracker
 
 class Tracker(Tracker):
     
-    def __init__(self, cnn, rnn, regressor, frameDims, optimizer, loss):
-        self.frameDims = frameDims
-        self.cnn = cnn
-        self.rnn = rnn
-        self.regressor = regressor
-        self.optimizer = optimizer
-        self.loss = loss
-        self.buildModel()
+    def __init__(self, models, optimizer, loss, inputShape):
+        self.inputShape = inputShape
+        self.buildModel(models, optimizer, loss, inputShape)
     
     
     def fit(self, frame, position, lnr):
@@ -30,36 +25,22 @@ class Tracker(Tracker):
     
     
     def forward(self, frame, initPosition):
+        #last_output, outputs, states = K.rnn(step, X, initial_states=[])
         position = self.model.predict_on_batch(frame)
         
         return position
     
     
-    def buildModel(self):
-        model = Sequential()
-        cnn = TimeDistributed(self.cnn.getModel(), input_shape=(None, ) + self.frameDims)
-        rnn = self.rnn.getModel()
-        reg = TimeDistributed(self.regressor.getModel())
-        model.add(cnn)
-        model.add(rnn)
-        model.add(reg)
-        model.compile(optimizer=self.optimizer, loss=self.loss)
+    def buildModel(self, models, optimizer, loss, inputShape):
+        inLayer = Input(shape=inputShape)
+        outLayer = inLayer
         
+        for model in models:
+            outLayer = model(outLayer)
+        
+        model = Model(input=inLayer, output=outLayer)
+        model.compile(optimizer=optimizer, loss=loss)
         self.model = model
-        
-        
-    """
-    Boolean (default False). If True, the last state for each sample at index i
-    in a batch will be used as initial state for the sample of index i in the 
-    following batch
-
-    @type    stateful: boolean
-    @param   stateful: stateful value
-    """
-    def setStateful(self, stateful, batchSize):
-        self.rnn.setStateful(stateful, batchSize)
-        
-        self.buildModel()
         
         
     def train(self, generator, epochs, batches, batchSize, validator):
@@ -70,6 +51,15 @@ class Tracker(Tracker):
         
     def reset(self):
         self.model.reset_states()
+        
+        
+    def getWeights(self):
+        
+        return self.model.get_weights()
+        
+    
+    def setWeights(self, weights):
+        self.model.set_weights(weights)
         
         
 class LossHistory(Callback):
