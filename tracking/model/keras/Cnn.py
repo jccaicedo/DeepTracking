@@ -5,26 +5,28 @@ Created on Tue Jun 28 15:11:10 2016
 @author: MindLab
 """
 
-from keras.models import Sequential
-from tracking.model.core.Cnn import Cnn
+from keras.layers.wrappers import TimeDistributed
+from keras.models import Model
+from tracking.model.keras.Module import Module
 
-class Cnn(Cnn):
+class Cnn(Module):
     
-    def __init__(self, layers):
-        self.buildModel(layers)
+    def __init__(self, input, layers):
+        self.build(input, layers)
         
     
-    def buildModel(self, layers):
-        model = Sequential()
+    def build(self, input, layers):
+        output = input
         
         for layer in layers:
-            model.add(layer)
+            output = layer(output)
         
-        self.model = model
-        
+        model = Model(input=input, output=output)
+        self.model = TimeDistributed(model)
+    
     
     def getOutputDim(self, inDims):
-        outDims = self.model.output_shape
+        outDims = self.model.layer.output_shape
         
         return outDims
         

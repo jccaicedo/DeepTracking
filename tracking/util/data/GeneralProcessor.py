@@ -19,8 +19,9 @@ class GeneralProcessor(Processor):
         frame = frame.transpose(0, 1, 4, 2, 3)
         #frame = frame[:,:,::-1,:,:] # Make BGR
         frame = Preprocess.scaleFrame(frame)
+        frameDims = frame.shape[-2:]
         
-        position = Preprocess.scalePosition(position, self.frameDims)
+        position = Preprocess.scalePosition(position, frameDims)
         position = self.positionModel.fromTwoCorners(position)
 
         return frame, position
@@ -29,9 +30,10 @@ class GeneralProcessor(Processor):
     def postprocess(self, frame, position):
         frame = Preprocess.rescaleFrame(frame)
         #frame = frame[:,:,::-1,:,:] # Make RGB
+        frameDims = frame.shape[-2:]
         frame = frame.transpose(0, 1, 3, 4, 2)
         
         position = self.positionModel.toTwoCorners(position)
-        position = Preprocess.rescalePosition(position, self.frameDims)
+        position = Preprocess.rescalePosition(position, frameDims)
 
         return frame, position

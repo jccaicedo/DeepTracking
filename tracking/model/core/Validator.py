@@ -10,8 +10,8 @@ import numpy as NP
 
 class Validator(object):
 
-    def __init__(self, frame, position, batchSize, measure, timeBatchSize):        
-        self.frame = frame
+    def __init__(self, input, position, batchSize, measure, timeBatchSize):        
+        self.input = input
         self.position = position
         self.batchSize = batchSize
         self.timeBatchSize = timeBatchSize
@@ -19,8 +19,8 @@ class Validator(object):
         
     
     def validateEpoch(self, tracker):
-        valSetSize = self.frame.shape[0] 
-        seqLength = self.frame.shape[1]
+        valSetSize = self.input[0].shape[0] 
+        seqLength = self.input[0].shape[1]
         targetDim = self.position.shape[2]
         iters = valSetSize / self.batchSize + (valSetSize % self.batchSize > 0)
         predPosition = NP.empty((0, seqLength, targetDim))
@@ -28,25 +28,25 @@ class Validator(object):
         for i in range(iters):
             start = self.batchSize * (i)
             end = self.batchSize * (i + 1)
-            frame = self.frame[start:end, ...]
+            input = [i[start:end, ...] for i in self.input]
             position = self.position[start:end, 0, ...]
             tracker.reset()
-            batchPredPosition = tracker.forward(frame, position)
+            batchPredPosition = tracker.forward(input, position)
             predPosition = NP.append(predPosition, batchPredPosition, axis=0)        
         
         measureValue = self.measure.calculate(self.position, predPosition).mean()
         logging.info("Validation Epoch: %s = %f", self.measure.name, measureValue)
         
     
-    def validateBatch(self, tracker, frame, position):
+    def validateBatch(self, tracker, input, position):
         tracker.reset()
-        predPosition = tracker.forward(frame, position[:, 0, :])
+        predPosition = tracker.forward(input, position[:, 0, :])
         measureValue = self.measure.calculate(position, predPosition).mean()
         logging.info("Validation Batch: %s = %f", self.measure.name, measureValue)
         
 
-    def setValidationSet(self, frame, position):
-        self.frame = frame
+    def setValidationSet(self, input, position):
+        self.input = input
         self.position = position
         
         

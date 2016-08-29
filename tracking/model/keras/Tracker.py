@@ -7,39 +7,43 @@ Created on Tue Jun 28 18:09:36 2016
 
 import logging
 from keras.callbacks import Callback
-from keras.layers import Input
 from keras.models import Model
 from tracking.model.core.Tracker import Tracker
 
 class Tracker(Tracker):
     
-    def __init__(self, models, optimizer, loss, inputShape):
+    def __init__(self, input, modules, optimizer, loss, inputShape):
+        self.input = input
+        self.modules = modules
+        self.optimizer = optimizer
+        self.loss = loss
         self.inputShape = inputShape
-        self.buildModel(models, optimizer, loss, inputShape)
+        self.build()
     
     
-    def fit(self, frame, position, lnr):
-        loss = self.model.train_on_batch(frame, position)
+    def fit(self, input, position, lnr):
+        loss = self.model.train_on_batch(input, position)
         
         return loss
     
     
-    def forward(self, frame, initPosition):
-        #last_output, outputs, states = K.rnn(step, X, initial_states=[])
-        position = self.model.predict_on_batch(frame)
+    def forward(self, input, initPosition):
+        #pframe = frame[:, :1, ...]
+        #last_output, outputs, states = K.rnn(self.step, frame, initial_states=[initPosition])
+        #return outputs
+        position = self.model.predict_on_batch(input)
         
         return position
     
     
-    def buildModel(self, models, optimizer, loss, inputShape):
-        inLayer = Input(shape=inputShape)
-        outLayer = inLayer
+    def build(self):
+        output = self.input
         
-        for model in models:
-            outLayer = model(outLayer)
+        for module in self.modules:
+            output = module.getModel()(output)
         
-        model = Model(input=inLayer, output=outLayer)
-        model.compile(optimizer=optimizer, loss=loss)
+        model = Model(input=self.input, output=output)
+        model.compile(optimizer=self.optimizer, loss=self.loss)
         self.model = model
         
         
@@ -48,7 +52,23 @@ class Tracker(Tracker):
         spe = batches * batchSize
         self.model.fit_generator(generator, nb_epoch=epochs, samples_per_epoch=spe, verbose=0, callbacks=[history])
         
+    
+    """
+    Boolean (default False). If True, the last state for each sample at index i
+    in a batch will be used as initial state for the sample of index i in the 
+    following batch
+
+    @type    stateful: boolean
+    @param   stateful: stateful value
+    """
+    def setStateful(self, stateful, batchSize):
         
+        for module in self.modules:
+            module.setStateful(stateful, batchSize)
+            
+        self.build()
+        
+    
     def reset(self):
         self.model.reset_states()
         
@@ -60,6 +80,15 @@ class Tracker(Tracker):
     
     def setWeights(self, weights):
         self.model.set_weights(weights)
+        
+        
+    def step(self, frame, states):
+        position = states[0]
+        frame, position = self.step(frame, position)
+        position = self.model.predict_on_batch(frame)
+        frame, position = self.stepPos(frame, position)
+        
+        return position, [position]
         
         
 class LossHistory(Callback):

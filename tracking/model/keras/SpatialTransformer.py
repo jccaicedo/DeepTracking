@@ -5,46 +5,64 @@ Created on Wed Aug 17 21:24:21 2016
 @author: MindLAB
 """
 
+import theano.tensor as THT
 from theano import tensor as T
 from keras import backend as K
-from keras.engine.topology import Layer
+from keras.layers import merge
+from keras.models import Model
+from tracking.model.keras.Module import Module
 from tracking.util.theano.Data import Data
 
 
-class SpatialTransformer(Layer):
+class SpatialTransformer(Module):
     
-    def __init__(self, layers, downsampleFactor=1):
-        self.downsampleFactor = downsampleFactor
-        super(SpatialTransformer, self).__init__()
+    def __init__(self, input, downsampleFactor=1):
+        if type(input) is not list or len(input) != 2:
+            raise Exception("SpatialTransformer must be called on a list of two tensors. Got: " + str(input))
+            
+        mode = lambda X: SpatialTransformer.call(X, downsampleFactor)
+        outputShape = lambda inputShapes: SpatialTransformer.getOutputShape(downsampleFactor, inputShapes)
+        output = merge(input, mode=mode, output_shape=outputShape)
         
-        if layers:
-            node_indices = [0 for _ in range(len(layers))]
-            self.add_inbound_node(layers, node_indices, None)
-            self.built = True
-        else:
-            self.built = False
-
-    def call(self, X, mask=None):
+        self.model = Model(input=input, output=output)
+    
+    
+    def getModel(self):
+        return self.model
+        
+    
+    @staticmethod
+    def call(X, downsampleFactor):
         if type(X) is not list or len(X) != 2:
-            raise Exception("Transformer must be called on a list of two tensors"
-                            ". Got: " + str(X))
-                            
-        input, theta = X[0], X[1]
-        batchSize = input.shape[0]
-        theta = theta.reshape((batchSize, 2, 3))
-        output = self.transform(theta, input, self.downsampleFactor)
+            raise Exception("SpatialTransformer must be called on a list of two tensors. Got: " + str(X))
+        
+        frame, theta = X[0], X[1]
+        
+        # Reshaping the input to exclude the time dimension
+        frameShape = K.shape(frame)
+        (chans, height, width) = frameShape[-3:]
+        frame = K.reshape(frame, (-1, chans, height, width))
+        theta = K.reshape(theta, (-1, 2, 3))
+        
+        # Applying the spatial transformation
+        output = SpatialTransformer.transform(theta, frame, downsampleFactor)
 
+        # Reshaping the frame to include time dimension
+        outputShape = K.shape(output)
+        outputShape = K.concatenate([frameShape[:-2], outputShape[-2:]])
+        output = THT.reshape(output, outputShape, ndim=K.ndim(output))
+        
         return output
 
-
-    def get_output_shape_for(self, inputShapes):
+    
+    @staticmethod
+    def getOutputShape(downsampleFactor, inputShapes):
         frameShape = inputShapes[0]
-        batchSize = None
-        channels = frameShape[1]
-        height = int(frameShape[2] / self.downsampleFactor)
-        width = int(frameShape[3] / self.downsampleFactor)
+        height = int(frameShape[2] / downsampleFactor)
+        width = int(frameShape[3] / downsampleFactor)
+        outputShape = frameShape[:-2] + (height, width)
         
-        return (batchSize, channels, height, width)
+        return outputShape
         
         
     @staticmethod

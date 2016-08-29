@@ -7,8 +7,7 @@ Created on Fri Aug 12 14:31:07 2016
 
 import numpy as NP
 import numpy.linalg as NLA
-from keras.models import Sequential
-from keras.layers import InputLayer
+from keras.layers import Input
 from tracking.model.core.Processor import Processor
 from tracking.model.keras.SpatialTransformer import SpatialTransformer
 from tracking.util.model.CentroidHWPM import CentroidHWPM
@@ -16,28 +15,30 @@ from tracking.util.model.CentroidHWPM import CentroidHWPM
 
 class Cropper(Processor):
     
-    def __init__(self, frameDims, context, positionModel, distorsion):
-        self.transformer = self.createTransformer(frameDims)
-        self.context = context
+    def __init__(self, frameDims, positionModel, context, distorsion, minSide, downsampleFactor):
         self.positionModel = positionModel
-        self.chwPM = CentroidHWPM()
+        self.context = context
         self.distorsion = distorsion
-    
+        self.minSide = minSide
+        self.chwPM = CentroidHWPM()
+        self.transformer = self.createTransformer(frameDims, downsampleFactor)
+        
     
     # position must be between [-1,1]
     # cropPosition.shape = (batchSize, seqLength, targetDim)
     # objPosition.shape = (batchSize, seqLength, targetDim)
     # frame.shape = (batchSize, seqLength, channels, height, width)
     def crop(self, frame, cropPosition, objPosition):
-        batchSize, seqLength, channels, height, width = frame.shape
+        frameShape = frame.shape
+        (chans, height, width) = frameShape[-3:]
         
         # Generating the transformations
         theta, thetaInv = self.generateTheta(cropPosition)
         
         # Generating the frames crops
-        frame = frame.reshape((batchSize * seqLength, channels, height, width))
+        frame = frame.reshape((-1, chans, height, width))
         frame = self.transformer.predict_on_batch([frame, theta])
-        frame = frame.reshape((batchSize, seqLength, channels, height, width))
+        frame = frame.reshape(frameShape[:-2] + frame.shape[-2:])
         
         # Generating the positions
         objPosition = self.positionModel.transform(thetaInv, objPosition)
@@ -57,8 +58,8 @@ class Cropper(Processor):
         dy = NP.random.uniform(-self.distorsion, self.distorsion, size=(samples))
         cX = chw[:, 0] + dx
         cY = chw[:, 1] + dy
-        h = chw[:, 2] * self.context + 0.01
-        w = chw[:, 3] * self.context + 0.01
+        h = NP.maximum(chw[:, 2] * self.context, self.minSide)
+        w = NP.maximum(chw[:, 3] * self.context, self.minSide)
         maxW = 1.0-NP.abs(cX)
         maxH = 1.0-NP.abs(cY)
         
@@ -78,15 +79,10 @@ class Cropper(Processor):
         return theta[:, :2, :], NLA.inv(theta)[:, :2, :]
         
         
-    def createTransformer(self, frameDims):
-        thetaModel = Sequential()
-        thetaModel.add(InputLayer(input_shape=(2, 3)))
-        
-        frameModel = Sequential()
-        frameModel.add(InputLayer(input_shape=frameDims))
-        
-        transformer = Sequential()
-        transformer.add(SpatialTransformer([frameModel, thetaModel], 1.))
+    def createTransformer(self, frameDims, downsampleFactor):
+        frame = Input(shape=frameDims)
+        theta = Input(shape=(2, 3))
+        transformer = SpatialTransformer([frame, theta], downsampleFactor).getModel()
         transformer.compile(optimizer="rmsprop", loss='mse')
         
         return transformer

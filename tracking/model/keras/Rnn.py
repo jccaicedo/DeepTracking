@@ -6,15 +6,15 @@ Created on Wed Jun 29 18:06:45 2016
 """
 
 from keras.models import Sequential
-from tracking.model.core.Rnn import Rnn
+from tracking.model.keras.Module import Module
 
-class Rnn(Rnn):
+class Rnn(Module):
     
     def __init__(self, layers):
-        self.buildModel(layers)
+        self.build(layers)
         
     
-    def buildModel(self, layers):
+    def build(self, layers):
         model = Sequential()
         
         for layer in layers:
@@ -24,6 +24,7 @@ class Rnn(Rnn):
         
     
     def getModel(self):
+        
         return self.model
         
     

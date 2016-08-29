@@ -6,18 +6,21 @@ Created on Wed Aug 24 20:06:51 2016
 """
 
 import theano.tensor as THT
-from keras.layers import Merge
+from keras import backend as K
+from keras.layers import merge
+from keras.models import Model
+from tracking.model.keras.Module import Module
 from tracking.util.theano.Data import Data
 
-class SquareAttention():
+class SquareAttention(Module):
     
-    def __init__(self, layers, alpha):
-        if type(layers) is not list or len(layers) != 2:
-            raise Exception("SquareAttention must be called on a list of two layers. Got: " + str(layers))
+    def __init__(self, input, alpha, scale):
+        if type(input) is not list or len(input) != 2:
+            raise Exception("SquareAttention must be called on a list of two tensors. Got: " + str(input))
         
-        mode = lambda X: SquareAttention.call(X, alpha)
-        
-        self.model = Merge(layers=layers, mode=mode, output_shape=SquareAttention.getOutputShape)
+        mode = lambda X: SquareAttention.call(X, alpha, scale)
+        output = merge(input, mode=mode, output_shape=SquareAttention.getOutputShape)
+        self.model = Model(input=input, output=output)
 
 
     def getModel(self):
@@ -25,20 +28,39 @@ class SquareAttention():
 
 
     @staticmethod
-    def call(X, alpha):
+    def call(X, alpha, scale):
         if type(X) is not list or len(X) != 2:
-            raise Exception("SpatialTransformer must be called on a list of two tensors. Got: " + str(X))
-           
+            raise Exception("SquareAttention must be called on a list of two tensors. Got: " + str(X))
+            
         frame, position  = X[0], X[1]
-        (batchSize, chans, height, width) = frame.shape
+        
+        # Reshaping the input to exclude the time dimension
+        frameShape = K.shape(frame)
+        positionShape = K.shape(position)
+        (chans, height, width) = frameShape[-3:]
+        targetDim = positionShape[-1]
+        frame = K.reshape(frame, (-1, chans, height, width))
+        position = K.reshape(position, (-1, ) + (targetDim, ))
+        
+        # Applying the attention
+        hw = THT.abs_(position[:, 2] - position[:, 0]) * scale / 2.0
+        hh = THT.abs_(position[:, 3] - position[:, 1]) * scale / 2.0
+        position = THT.maximum(THT.set_subtensor(position[:, 0], position[:, 0] - hw), -1.0)
+        position = THT.minimum(THT.set_subtensor(position[:, 2], position[:, 2] + hw), 1.0)
+        position = THT.maximum(THT.set_subtensor(position[:, 1], position[:, 1] - hh), -1.0)
+        position = THT.minimum(THT.set_subtensor(position[:, 3], position[:, 3] + hh), 1.0)
         rX = Data.linspace(-1.0, 1.0, width)
         rY = Data.linspace(-1.0, 1.0, height)
         FX = THT.gt(rX, position[:,0].dimshuffle(0,'x')) * THT.le(rX, position[:,2].dimshuffle(0,'x'))
         FY = THT.gt(rY, position[:,1].dimshuffle(0,'x')) * THT.le(rY, position[:,3].dimshuffle(0,'x'))
         m = FY.dimshuffle(0, 1, 'x') * FX.dimshuffle(0, 'x', 1)
         m = m + alpha - THT.gt(m, 0.) * alpha
+        frame = frame * m.dimshuffle(0,'x',1,2)
         
-        return frame * m.dimshuffle(0,'x',1,2)
+        # Reshaping the frame to include time dimension
+        output = K.reshape(frame, frameShape)
+        
+        return output
 
 
     @staticmethod
