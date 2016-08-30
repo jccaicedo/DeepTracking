@@ -6,18 +6,20 @@ Created on Tue Jun 28 18:09:36 2016
 """
 
 import logging
+import numpy as NP
 from keras.callbacks import Callback
 from keras.models import Model
 from tracking.model.core.Tracker import Tracker
 
 class Tracker(Tracker):
     
-    def __init__(self, input, modules, optimizer, loss, inputShape):
+    def __init__(self, input, modules, optimizer, loss, processor, timeSize):
         self.input = input
         self.modules = modules
         self.optimizer = optimizer
         self.loss = loss
-        self.inputShape = inputShape
+        self.processor = processor
+        self.timeSize = timeSize
         self.build()
     
     
@@ -25,14 +27,29 @@ class Tracker(Tracker):
         loss = self.model.train_on_batch(input, position)
         
         return loss
-    
-    
-    def forward(self, input, initPosition):
-        #pframe = frame[:, :1, ...]
-        #last_output, outputs, states = K.rnn(self.step, frame, initial_states=[initPosition])
-        #return outputs
-        position = self.model.predict_on_batch(input)
         
+    
+    def predict(self, input):
+        position = self.model.predict_on_batch(input)
+    
+        return position
+    
+    
+    def forward(self, frame, initPosition):
+        batchSize = frame.shape[0]
+        seqLength = frame.shape[1]
+        targetDim = initPosition.shape[1]
+        iters = seqLength / self.timeSize + (seqLength % self.timeSize > 0)
+        position = NP.empty((batchSize, 0, targetDim))
+        predPosition = initPosition
+        
+        for i in range(iters):
+            start = self.timeSize * (i)
+            end = self.timeSize * (i + 1)
+            pFrame = frame[:, start:end, ...]
+            predPosition = self.step(pFrame, predPosition)
+            position = NP.append(position, predPosition, axis=1)
+    
         return position
     
     
@@ -82,13 +99,12 @@ class Tracker(Tracker):
         self.model.set_weights(weights)
         
         
-    def step(self, frame, states):
-        position = states[0]
-        frame, position = self.step(frame, position)
-        position = self.model.predict_on_batch(frame)
-        frame, position = self.stepPos(frame, position)
+    def step(self, frame, position):
+        input = self.processor.before(frame, position)
+        position = self.model.predict_on_batch(input)
+        position = self.processor.after(position)
         
-        return position, [position]
+        return position
         
         
 class LossHistory(Callback):
