@@ -36,9 +36,7 @@ class Cropper(Processor):
         theta, thetaInv = self.generateTheta(cropPosition)
         
         # Generating the frames crops
-        frame = frame.reshape((-1, chans, height, width))
         frame = self.transformer.predict_on_batch([frame, theta])
-        frame = frame.reshape(frameShape[:-2] + frame.shape[-2:])
         
         # Generating the positions
         objPosition = self.positionModel.transform(thetaInv, objPosition)
@@ -60,8 +58,8 @@ class Cropper(Processor):
         cY = chw[:, 1] + dy
         h = NP.maximum(chw[:, 2] * self.context, self.minSide)
         w = NP.maximum(chw[:, 3] * self.context, self.minSide)
-        maxW = 1.0-NP.abs(cX)
-        maxH = 1.0-NP.abs(cY)
+        maxW = 1.0 - NP.abs(cX)
+        maxH = 1.0 - NP.abs(cY)
         
         # Calculating the parameters of the transformation
         tx = cX
@@ -76,12 +74,12 @@ class Cropper(Processor):
         theta[:, 1, 2] = ty
         theta[:, 2, 2] = 1.0
         
-        return theta[:, :2, :], NLA.inv(theta)[:, :2, :]
+        return theta, NLA.inv(theta)
         
         
     def createTransformer(self, frameDims, downsampleFactor):
-        frame = Input(shape=frameDims)
-        theta = Input(shape=(2, 3))
+        frame = Input(shape=(None, ) + frameDims)
+        theta = Input(shape=(3, 3))
         transformer = SpatialTransformer([frame, theta], downsampleFactor).getModel()
         transformer.compile(optimizer="rmsprop", loss='mse')
         

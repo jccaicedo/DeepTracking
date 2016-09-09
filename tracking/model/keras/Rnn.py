@@ -5,22 +5,22 @@ Created on Wed Jun 29 18:06:45 2016
 @author: MindLab
 """
 
-from keras.models import Sequential
+from keras.models import Model
 from tracking.model.keras.Module import Module
 
 class Rnn(Module):
     
-    def __init__(self, layers):
-        self.build(layers)
+    def __init__(self, input, layers):
+        self.build(input, layers)
         
     
-    def build(self, layers):
-        model = Sequential()
+    def build(self, input, layers):
+        output = input
         
         for layer in layers:
-            model.add(layer)
+            output = layer(output)
         
-        self.model = model
+        self.model = Model(input=input, output=output)
         
     
     def getModel(self):
@@ -44,14 +44,18 @@ class Rnn(Module):
     def setStateful(self, stateful, batchSize):
         cfg = self.getModel().get_config()
         
-        for lay in cfg:
+        for lay in cfg["layers"]:
             conf = lay["config"]
-            conf["stateful"] = stateful
-            inShape = conf["batch_input_shape"]
-            inShape = (batchSize, None, inShape[2])
-            conf["batch_input_shape"] = inShape
             
-        model = Sequential.from_config(cfg)
+            if "stateful" in conf:
+                conf["stateful"] = stateful
+            
+            if "batch_input_shape" in conf:
+                inShape = conf["batch_input_shape"]
+                inShape = (batchSize, None, inShape[2])
+                conf["batch_input_shape"] = inShape
+            
+        model = Model.from_config(cfg)
         weights = self.model.get_weights()
         model.set_weights(weights)
         self.model = model

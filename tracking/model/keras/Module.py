@@ -5,7 +5,7 @@ Created on Sun Aug 28 22:53:44 2016
 @author: MindLAB
 """
 
-class Module():
+class Module(object):
     
     """
     Boolean (default False). If True, the last state for each sample at index i
@@ -20,4 +20,5 @@ class Module():
     
     
     def getModel(self):
+        
         return None

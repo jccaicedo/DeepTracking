@@ -6,7 +6,7 @@ Created on Fri Apr 15 12:12:34 2016
 """
 
 import logging
-import cPickle as pickle
+import dill
 
 class Tracker(object):
     
@@ -90,13 +90,13 @@ class Tracker(object):
     def save(self, path):
         logging.info("Saving tracker to %s", path)
         modelFile = open(path, 'wb')
-        pickle.dump(self.__dict__, modelFile, protocol=pickle.HIGHEST_PROTOCOL)
+        dill.dump(self.__dict__, modelFile)
         modelFile.close()
             
     
     def load(self, path):
         logging.info("Loading tracker from %s", path)
         modelFile = open(path, 'rb')
-        tmpDict = pickle.load(modelFile)
+        tmpDict = dill.load(modelFile)
         modelFile.close()
         self.__dict__.update(tmpDict)

@@ -13,9 +13,10 @@ from tracking.model.core.Tracker import Tracker
 
 class Tracker(Tracker):
     
-    def __init__(self, input, modules, optimizer, loss, processor, timeSize):
+    def __init__(self, input, modules, builder, optimizer, loss, processor, timeSize):
         self.input = input
         self.modules = modules
+        self.builder = builder
         self.optimizer = optimizer
         self.loss = loss
         self.processor = processor
@@ -54,11 +55,7 @@ class Tracker(Tracker):
     
     
     def build(self):
-        output = self.input
-        
-        for module in self.modules:
-            output = module.getModel()(output)
-        
+        output = self.builder.build(self.input, self.modules)
         model = Model(input=self.input, output=output)
         model.compile(optimizer=self.optimizer, loss=self.loss)
         self.model = model

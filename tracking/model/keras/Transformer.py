@@ -6,43 +6,47 @@ Created on Wed Aug 17 21:24:21 2016
 """
 
 from keras import backend as K
-from keras.layers import Merge
+from keras.layers import merge
+from keras.models import Model
 from theano import tensor as T
 
 class Transformer():
     
-    def __init__(self, layers):
-        if type(layers) is not list or len(layers) != 2:
-            raise Exception("SpatialTransformer must be called on a list of two layers. Got: " + str(layers))
+    def __init__(self, input):
+        if type(input) is not list or len(input) != 2:
+            raise Exception("Transformer must be called on a list of two tensors. Got: " + str(input))
         
-        self.model = Merge(layers=layers, mode=Transformer.call, output_shape=Transformer.getOutputShape)
+        output = merge(input, mode=self.call, output_shape=self.getOutputShape)
+        self.model = Model(input=input, output=output)
 
 
     def getModel(self):
+        
         return self.model
 
 
-    @staticmethod
-    def call(X):
+    def call(self, X):
         if type(X) is not list or len(X) != 2:
-            raise Exception("SpatialTransformer must be called on a list of two tensors. Got: " + str(X))
+            raise Exception("Transformer must be called on a list of two tensors. Got: " + str(X))
                             
-        theta, position  = X[0], X[1]
-        theta = theta.reshape((-1, 2, 3))
-        output = Transformer.transform(theta, position)
+        position, theta = X[0], X[1]
+        positionShape = K.shape(position)
+        position = K.reshape(position, (-1, positionShape[-1]))
+        theta = theta.reshape((-1, 3, 3))
+        output = Transformer.transform(position, theta)
+        output = K.reshape(output, positionShape)
 
         return output
 
 
-    @staticmethod
-    def getOutputShape(inputShapes):
-        positionShape = inputShapes[1]
+    def getOutputShape(self, inputShapes):
+        positionShape = inputShapes[0]
         
         return positionShape
         
         
     @staticmethod
-    def transform(theta, position):
+    def transform(position, theta):
         (batchSize, targetDim) = K.shape(position)
         
         # Reshaping the positions

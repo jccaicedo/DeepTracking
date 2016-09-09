@@ -6,7 +6,6 @@ Created on Wed Aug 17 21:24:21 2016
 """
 
 import theano.tensor as THT
-from theano import tensor as T
 from keras import backend as K
 from keras.layers import merge
 from keras.models import Model
@@ -19,64 +18,62 @@ class SpatialTransformer(Module):
     def __init__(self, input, downsampleFactor=1):
         if type(input) is not list or len(input) != 2:
             raise Exception("SpatialTransformer must be called on a list of two tensors. Got: " + str(input))
-            
-        mode = lambda X: SpatialTransformer.call(X, downsampleFactor)
-        outputShape = lambda inputShapes: SpatialTransformer.getOutputShape(downsampleFactor, inputShapes)
-        output = merge(input, mode=mode, output_shape=outputShape)
         
+        self.downsampleFactor = downsampleFactor
+        output = merge(input, mode=self.call, output_shape=self.getOutputShape)
         self.model = Model(input=input, output=output)
     
     
     def getModel(self):
+        
         return self.model
         
-    
-    @staticmethod
-    def call(X, downsampleFactor):
+
+    def call(self, X):
         if type(X) is not list or len(X) != 2:
             raise Exception("SpatialTransformer must be called on a list of two tensors. Got: " + str(X))
         
         frame, theta = X[0], X[1]
         
         # Reshaping the input to exclude the time dimension
+        frameDim = K.ndim(frame)
         frameShape = K.shape(frame)
         (chans, height, width) = frameShape[-3:]
         frame = K.reshape(frame, (-1, chans, height, width))
-        theta = K.reshape(theta, (-1, 2, 3))
+        theta = K.reshape(theta, (-1, 3, 3))[:, :2, :]
         
         # Applying the spatial transformation
-        output = SpatialTransformer.transform(theta, frame, downsampleFactor)
+        output = SpatialTransformer.transform(theta, frame, self.downsampleFactor)
 
         # Reshaping the frame to include time dimension
         outputShape = K.shape(output)
         outputShape = K.concatenate([frameShape[:-2], outputShape[-2:]])
-        output = THT.reshape(output, outputShape, ndim=K.ndim(output))
+        output = THT.reshape(output, outputShape, ndim=frameDim)
         
         return output
 
     
-    @staticmethod
-    def getOutputShape(downsampleFactor, inputShapes):
+    def getOutputShape(self, inputShapes):
         frameShape = inputShapes[0]
-        height = int(frameShape[2] / downsampleFactor)
-        width = int(frameShape[3] / downsampleFactor)
+        height = int(frameShape[-2] / self.downsampleFactor)
+        width = int(frameShape[-1] / self.downsampleFactor)
         outputShape = frameShape[:-2] + (height, width)
         
         return outputShape
         
-        
+    
     @staticmethod
     def transform(theta, input, downsample_factor):
         num_batch, num_channels, height, width = input.shape
-        theta = T.reshape(theta, (-1, 2, 3))
+        theta = THT.reshape(theta, (-1, 2, 3))
     
         # grid of (x_t, y_t, 1), eq (1) in ref [1]
-        out_height = T.cast(height / downsample_factor, 'int64')
-        out_width = T.cast(width / downsample_factor, 'int64')
+        out_height = THT.cast(height / downsample_factor, 'int64')
+        out_width = THT.cast(width / downsample_factor, 'int64')
         grid = SpatialTransformer.meshgrid(out_height, out_width)
     
         # Transform A x (x_t, y_t, 1)^T -> (x_s, y_s)
-        T_g = T.dot(theta, grid)
+        T_g = THT.dot(theta, grid)
         x_s = T_g[:, 0]
         y_s = T_g[:, 1]
         x_s_flat = x_s.flatten()
@@ -88,7 +85,7 @@ class SpatialTransformer(Module):
             input_dim, x_s_flat, y_s_flat,
             out_height, out_width)
     
-        output = T.reshape(
+        output = THT.reshape(
             input_transformed, (num_batch, out_height, out_width, num_channels))
         output = output.dimshuffle(0, 3, 1, 2)  # dimshuffle to conv format
         
@@ -107,15 +104,16 @@ class SpatialTransformer(Module):
         # Note: If the image size is known at layer construction time, we could
         # compute the meshgrid offline in numpy instead of doing it dynamically
         # in Theano. However, it hardly affected performance when we tried.
-        x_t = T.dot(T.ones((height, 1)),
+        x_t = THT.dot(THT.ones((height, 1)),
                     Data.linspace(-1.0, 1.0, width).dimshuffle('x', 0))
-        y_t = T.dot(Data.linspace(-1.0, 1.0, height).dimshuffle(0, 'x'),
-                    T.ones((1, width)))
+        y_t = THT.dot(Data.linspace(-1.0, 1.0, height).dimshuffle(0, 'x'),
+                    THT.ones((1, width)))
     
         x_t_flat = x_t.reshape((1, -1))
         y_t_flat = y_t.reshape((1, -1))
-        ones = T.ones_like(x_t_flat)
-        grid = T.concatenate([x_t_flat, y_t_flat, ones], axis=0)
+        ones = THT.ones_like(x_t_flat)
+        grid = THT.concatenate([x_t_flat, y_t_flat, ones], axis=0)
+        
         return grid
         
     
@@ -123,12 +121,12 @@ class SpatialTransformer(Module):
     def interpolate(im, x, y, out_height, out_width):
         # *_f are floats
         num_batch, height, width, channels = im.shape
-        height_f = T.cast(height, K.floatx())
-        width_f = T.cast(width, K.floatx())
+        height_f = THT.cast(height, K.floatx())
+        width_f = THT.cast(width, K.floatx())
     
         # clip coordinates to [-1, 1]
-        x = T.clip(x, -1, 1)
-        y = T.clip(y, -1, 1)
+        x = THT.clip(x, -1, 1)
+        y = THT.clip(y, -1, 1)
     
         # scale coordinates from [-1, 1] to [0, width/height - 1]
         x = (x + 1) / 2 * (width_f - 1)
@@ -137,22 +135,22 @@ class SpatialTransformer(Module):
         # obtain indices of the 2x2 pixel neighborhood surrounding the coordinates;
         # we need those in floatX for interpolation and in int64 for indexing. for
         # indexing, we need to take care they do not extend past the image.
-        x0_f = T.floor(x)
-        y0_f = T.floor(y)
+        x0_f = THT.floor(x)
+        y0_f = THT.floor(y)
         x1_f = x0_f + 1
         y1_f = y0_f + 1
-        x0 = T.cast(x0_f, 'int64')
-        y0 = T.cast(y0_f, 'int64')
-        x1 = T.cast(T.minimum(x1_f, width_f - 1), 'int64')
-        y1 = T.cast(T.minimum(y1_f, height_f - 1), 'int64')
+        x0 = THT.cast(x0_f, 'int64')
+        y0 = THT.cast(y0_f, 'int64')
+        x1 = THT.cast(THT.minimum(x1_f, width_f - 1), 'int64')
+        y1 = THT.cast(THT.minimum(y1_f, height_f - 1), 'int64')
     
         # The input is [num_batch, height, width, channels]. We do the lookup in
         # the flattened input, i.e [num_batch*height*width, channels]. We need
         # to offset all indices to match the flat version
         dim2 = width
         dim1 = width*height
-        base = T.repeat(
-            T.arange(num_batch, dtype='int64')*dim1, out_height*out_width)
+        base = THT.repeat(
+            THT.arange(num_batch, dtype='int64')*dim1, out_height*out_width)
         base_y0 = base + y0*dim2
         base_y1 = base + y1*dim2
         idx_a = base_y0 + x0
@@ -172,6 +170,6 @@ class SpatialTransformer(Module):
         wb = ((x1_f-x) * (y-y0_f)).dimshuffle(0, 'x')
         wc = ((x-x0_f) * (y1_f-y)).dimshuffle(0, 'x')
         wd = ((x-x0_f) * (y-y0_f)).dimshuffle(0, 'x')
-        output = T.sum([wa*Ia, wb*Ib, wc*Ic, wd*Id], axis=0)
+        output = THT.sum([wa*Ia, wb*Ib, wc*Ic, wd*Id], axis=0)
         
         return output
