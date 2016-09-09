@@ -77,7 +77,7 @@ class Tracker(Tracker):
     """
     def setStateful(self, stateful, batchSize):
         
-        for module in self.modules:
+        for name, module in self.modules.items():
             module.setStateful(stateful, batchSize)
             
         self.build()
