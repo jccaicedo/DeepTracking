@@ -9,8 +9,9 @@ from keras import backend as K
 from keras.layers import merge
 from keras.models import Model
 from theano import tensor as T
+from tracking.model.keras.Module import Module
 
-class Transformer():
+class Transformer(Module):
     
     def __init__(self, input):
         if type(input) is not list or len(input) != 2:
