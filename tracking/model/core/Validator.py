@@ -18,8 +18,8 @@ class Validator(object):
         
     
     def validateEpoch(self, tracker):
-        valSetSize = self.input.shape[0] 
-        seqLength = self.input.shape[1]
+        valSetSize = self.input[0].shape[0] 
+        seqLength = self.input[0].shape[1]
         targetDim = self.position.shape[2]
         iters = valSetSize / self.batchSize + (valSetSize % self.batchSize > 0)
         predPosition = NP.empty((0, seqLength, targetDim))
@@ -27,7 +27,7 @@ class Validator(object):
         for i in range(iters):
             start = self.batchSize * (i)
             end = self.batchSize * (i + 1)
-            input = self.input[start:end, ...]
+            input = [input[start:end, ...] for input in self.input]
             position = self.position[start:end, 0, ...]
             tracker.reset()
             batchPredPosition = tracker.forward(input, position)

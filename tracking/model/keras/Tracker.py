@@ -13,7 +13,7 @@ from tracking.model.core.Tracker import Tracker
 
 class Tracker(Tracker):
     
-    def __init__(self, input, modules, builder, optimizer, loss, processor, timeSize):
+    def __init__(self, input=None, modules=None, builder=None, optimizer=None, loss=None, processor=None, timeSize=None):
         self.input = input
         self.modules = modules
         self.builder = builder
@@ -21,7 +21,6 @@ class Tracker(Tracker):
         self.loss = loss
         self.processor = processor
         self.timeSize = timeSize
-        self.build()
     
     
     def fit(self, input, position, lnr):
@@ -36,9 +35,9 @@ class Tracker(Tracker):
         return position
     
     
-    def forward(self, frame, initPosition):
-        batchSize = frame.shape[0]
-        seqLength = frame.shape[1]
+    def forward(self, input, initPosition):
+        batchSize = input[0].shape[0]
+        seqLength = input[0].shape[1]
         targetDim = initPosition.shape[1]
         iters = seqLength / self.timeSize + (seqLength % self.timeSize > 0)
         position = NP.empty((batchSize, 0, targetDim))
@@ -47,8 +46,8 @@ class Tracker(Tracker):
         for i in range(iters):
             start = self.timeSize * (i)
             end = self.timeSize * (i + 1)
-            pFrame = frame[:, start:end, ...]
-            predPosition = self.step(pFrame, predPosition)
+            pInput = [inP[:, start:end, ...] for inP in input]
+            predPosition = self.step(pInput, predPosition)
             position = NP.append(position, predPosition, axis=1)
     
         return position
@@ -96,8 +95,8 @@ class Tracker(Tracker):
         self.model.set_weights(weights)
         
         
-    def step(self, frame, position):
-        input = self.processor.before(frame, position)
+    def step(self, input, position):
+        input = self.processor.before(input, position)
         position = self.model.predict_on_batch(input)
         position = self.processor.after(position)
         

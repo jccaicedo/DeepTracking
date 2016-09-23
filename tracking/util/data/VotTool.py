@@ -15,6 +15,12 @@ import tracking.util.data.Preprocess as Preprocess
 from PIL import Image
 
 
+def loadFrame(path):
+    frame = NP.array(Image.open(path))
+    
+    return frame
+
+
 def loadPosition(path):
     # Load bounding boxes information
     position = []
@@ -35,7 +41,7 @@ def loadSequence(path, extension, boxesFile, size):
     
     
     for i, framePath in enumerate(framesPath):
-        tmpFrame = NP.array(Image.open(framePath))
+        tmpFrame = loadFrame(framePath)
         originalSize = tmpFrame.shape[:2][::-1] # imageSize must be (width, height)
         frame.append(SCPM.imresize(tmpFrame, size))
     

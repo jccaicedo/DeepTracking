@@ -25,10 +25,10 @@ class SquareAttention(Module):
 
 
     def getModel(self):
+        
         return self.model
 
-
-    #@staticmethod
+    
     def call(self, X):
         if type(X) is not list or len(X) != 2:
             raise Exception("SquareAttention must be called on a list of two tensors. Got: " + str(X))
@@ -64,8 +64,7 @@ class SquareAttention(Module):
         return output
 
 
-    #@staticmethod
     def getOutputShape(self, inputShapes):
         frameShape = inputShapes[0]
         
-        return frameShape        
+        return frameShape  

@@ -17,12 +17,7 @@ class CropperProcessor(Processor):
         
         
     def preprocess(self, frame, position):
-        if position.shape[1] > 1:
-            cropPosition = NP.roll(position, 1, axis=1) # Shift the time
-            cropPosition[:, 0, :] = cropPosition[:, 1, :] # First frame is ground truth
-        else:
-            cropPosition = NP.copy(position)
-        frame, position, self.theta = self.cropper.crop(frame, cropPosition, position)
+        frame, position, self.theta = self.cropper.crop(frame, position, position)
 
         return frame, position
 
