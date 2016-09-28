@@ -5,18 +5,28 @@ Created on Mon Sep 12 22:30:52 2016
 @author: MindLAB
 """
 
+#!/usr/bin/python
+
+import logging
 import numpy as NP
-import sys
+import os
 import scipy.misc as SCPM
+import sys
 import tracking.util.data.Preprocess as Preprocess
 import tracking.util.data.VotTool as VotTool
 import vot
+
+stderr_ = sys.stderr
+sys.stderr = open(os.devnull, "w")
+
 from tracking.model.keras.Tracker import Tracker
 from tracking.util.data.GeneralProcessor import GeneralProcessor
 from tracking.util.model.TwoCornersPM import TwoCornersPM
 
+sys.stderr.close()
+sys.stderr = stderr_
 
-def loadTracker(path="/home/fhdiaze/Models/Tracker22.pkl"):
+def loadTracker(path="/home/fhdiaze/Models/Tracker22A.pkl"):
     tracker = Tracker()
     tracker.load(path)
     
@@ -45,38 +55,63 @@ def track(tracker, processor, frame, position, size):
     
     x, y, x1, y1 = position[0, 0, :]
     
+    #logging.info("Tracker prediction: [%s, %s, %s, %s]", x, y, x1, y1)
+    
     return vot.Rectangle(x, y, x1 - x, y1 - y)
+
+
+
+# LOGGING VARIABLES
+trackerName = "Tracker22AVot"
+logFilePath = "/home/fhdiaze/Data/Log/" + trackerName + ".log"
+logFormat = "%(asctime)s:%(levelname)s:%(funcName)s:%(lineno)d:%(message)s"
+logDateFormat = "%H:%M:%S"
+logLevel = logging.INFO
+
+logger = logging.getLogger()
+fileHandler = logging.FileHandler(logFilePath, mode='w')
+formatter = logging.Formatter(logFormat)
+fileHandler.setFormatter(formatter)
+logger.handlers = []
+logger.addHandler(fileHandler)
+logger.setLevel(logLevel)
+
+# *****************************************
+# VOT: Create VOT handle at the beginning
+#      Then get the initializaton region
+#      and the first image
+# *****************************************
+handle = vot.VOT("rectangle")
+position = handle.region()
+
+# Process the first frame
+framePath = handle.frame()
+
+if not framePath:
+    sys.exit(0)
     
-    
-def main():
-    frameDims = (3, 224, 224) # (channels, width, height)
-    
-    positionRepresentation = TwoCornersPM()
-    processor = GeneralProcessor(frameDims[1:3], positionRepresentation)
-    
-    handle = vot.VOT("rectangle")
-    position = handle.region() # region = (topLeftX, topLeftY, width, height)
-    
+frameDims = (3, 224, 224) # (channels, width, height)
+positionRepresentation = TwoCornersPM()
+processor = GeneralProcessor(frameDims[1:3], positionRepresentation)
+frame = VotTool.loadFrame(framePath)
+tracker = loadTracker()
+logging.info("Tracker was loaded: %s", tracker.loss)
+
+while True:
+    # *****************************************
+    # VOT: Call frame method to get path of the 
+    #      current image frame. If the result is
+    #      null, the sequence is over.
+    # *****************************************
     framePath = handle.frame()
-    
     if not framePath:
-        sys.exit(0)
+        break
     
     frame = VotTool.loadFrame(framePath)
-    tracker = loadTracker()
+    position = track(tracker, processor, frame, position, frameDims[1:3])
     
-    while True:
-        framePath = handle.frame()
-        
-        if not framePath:
-            break
-    
-        frame = VotTool.loadFrame(framePath)
-        position = track(tracker, processor, frame, position, frameDims[1:3])
-        
-        
-        handle.report(position)
-
-
-if __name__ == "__main__":
-    main()
+    # *****************************************
+    # VOT: Report the position of the object 
+    #      every frame using report method.
+    # *****************************************
+    handle.report(position)

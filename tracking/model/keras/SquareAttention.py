@@ -56,7 +56,7 @@ class SquareAttention(Module):
         FY = THT.gt(rY, position[:,1].dimshuffle(0,'x')) * THT.le(rY, position[:,3].dimshuffle(0,'x'))
         m = FY.dimshuffle(0, 1, 'x') * FX.dimshuffle(0, 'x', 1)
         m = m + self.alpha - THT.gt(m, 0.) * self.alpha
-        frame = frame * m.dimshuffle(0,'x',1,2)
+        frame = frame * m.dimshuffle(0, 'x', 1, 2)
         
         # Reshaping the frame to include time dimension
         output = K.reshape(frame, frameShape)

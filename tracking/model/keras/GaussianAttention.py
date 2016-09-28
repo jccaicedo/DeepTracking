@@ -35,7 +35,11 @@ class GaussianAttention(Module):
         
         # Reshaping the input to exclude the time dimension
         frameShape = K.shape(frame)
+        positionShape = K.shape(position)
         (chans, height, width) = frameShape[-3:]
+        targetDim = positionShape[-1]
+        frame = K.reshape(frame, (-1, chans, height, width))
+        position = K.reshape(position, (-1, ) + (targetDim, ))
         
         cx = (position[:, 0] + position[:, 2]) / 2.0
         cy = (position[:, 1] + position[:, 3]) / 2.0
@@ -51,7 +55,10 @@ class GaussianAttention(Module):
         
         frame = frame * m.dimshuffle(0, 'x', 1, 2)
         
-        return frame
+        # Reshaping the frame to include time dimension
+        output = K.reshape(frame, frameShape)
+        
+        return output
         
         
     def getOutputShape(self, inputShapes):
