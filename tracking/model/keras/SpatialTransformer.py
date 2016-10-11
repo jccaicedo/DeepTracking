@@ -20,7 +20,7 @@ class SpatialTransformer(Module):
             raise Exception("SpatialTransformer must be called on a list of two tensors. Got: " + str(input))
         
         self.downsampleFactor = downsampleFactor
-        output = merge(input, mode=self.call, output_shape=self.getOutputShape)
+        output = merge(input, mode=self.call, output_shape=self.outputShape)
         self.model = Model(input=input, output=output)
     
     
@@ -53,7 +53,7 @@ class SpatialTransformer(Module):
         return output
 
     
-    def getOutputShape(self, inputShapes):
+    def outputShape(self, inputShapes):
         frameShape = inputShapes[0]
         height = int(frameShape[-2] / self.downsampleFactor)
         width = int(frameShape[-1] / self.downsampleFactor)

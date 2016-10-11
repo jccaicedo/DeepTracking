@@ -25,14 +25,10 @@ class Cnn(Module):
         self.model = TimeDistributed(model)
     
     
-    def getOutputDim(self, inDims):
-        outDims = self.model.layer.output_shape
+    def getOutputShape(self):
+        outputShape = self.model.layer.output_shape
         
-        return outDims
-        
-        
-    def getModel(self):
-        return self.model
+        return outputShape
         
         
     def setTrainable(self, trainable):

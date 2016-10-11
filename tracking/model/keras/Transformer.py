@@ -17,7 +17,7 @@ class Transformer(Module):
         if type(input) is not list or len(input) != 2:
             raise Exception("Transformer must be called on a list of two tensors. Got: " + str(input))
         
-        output = merge(input, mode=self.call, output_shape=self.getOutputShape)
+        output = merge(input, mode=self.call, output_shape=self.outputShape)
         self.model = Model(input=input, output=output)
 
 
@@ -40,7 +40,7 @@ class Transformer(Module):
         return output
 
 
-    def getOutputShape(self, inputShapes):
+    def outputShape(self, inputShapes):
         positionShape = inputShapes[0]
         
         return positionShape

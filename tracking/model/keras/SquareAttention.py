@@ -20,7 +20,7 @@ class SquareAttention(Module):
         
         self.alpha = alpha
         self.scale = scale
-        output = merge(input, mode=self.call, output_shape=self.getOutputShape)
+        output = merge(input, mode=self.call, output_shape=self.outputShape)
         self.model = Model(input=input, output=output)
 
 
@@ -64,7 +64,7 @@ class SquareAttention(Module):
         return output
 
 
-    def getOutputShape(self, inputShapes):
+    def outputShape(self, inputShapes):
         frameShape = inputShapes[0]
         
         return frameShape  

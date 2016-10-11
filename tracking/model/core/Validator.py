@@ -33,7 +33,7 @@ class Validator(object):
             batchPredPosition = tracker.forward(input, position)
             predPosition = NP.append(predPosition, batchPredPosition, axis=0)        
         
-        measureValue = self.measure.calculate(self.position, predPosition).mean()
+        measureValue = self.measure.calculate(self.position[:, 1:, :], predPosition).mean()
         logging.info("Validation Epoch: %s = %f", self.measure.name, measureValue)
         
     
@@ -55,7 +55,7 @@ class Validator(object):
         for name, input, position in seqs:
             tracker.reset()
             predP = tracker.forward(input, position[:, 0, :])
-            measure = self.measure.calculate(position, predP)
+            measure = self.measure.calculate(position[:, 1:, :], predP)
     
             result[name] = measure
     

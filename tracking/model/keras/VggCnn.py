@@ -91,7 +91,7 @@ class VggCnn(Cnn):
         
         return model
         
-    def getOutputDim(self, inDims):
+    def getOutputShape(self):
         outDims = self.model.layer.output_shape
         
         return outDims

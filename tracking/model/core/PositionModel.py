@@ -30,12 +30,12 @@ class PositionModel(object):
     
     # theta.shape = (batchSize, 3, 3)
     def transform(self, theta, position):
+        positionShape = position.shape
+        position = position.reshape((-1, self.getTargetDim()))
         position = self.toTwoCorners(position)
         
-        batchSize, length, targetDim = position.shape
-        
         # Reshaping the positions
-        samples = batchSize * length
+        samples, targetDim = position.shape
         position = NP.ravel(position).reshape((samples, 2, -1)).transpose(0, 2, 1)
         position = NP.concatenate((position, NP.ones((samples, 1, position.shape[2]))), axis=1)
         
@@ -43,9 +43,9 @@ class PositionModel(object):
         position = NP.matmul(theta, position)[:, :2, :]
         
         # Reshaping the result
-        position = position.transpose(0, 2, 1).reshape((batchSize, length, targetDim))
-        
+        position = position.transpose(0, 2, 1).reshape((-1, targetDim))
         position = self.fromTwoCorners(position)
+        position = position.reshape(positionShape)
         
         return position
     

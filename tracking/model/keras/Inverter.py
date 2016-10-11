@@ -17,13 +17,8 @@ class Inverter(Module):
         self.build(input)
         
         
-    def getModel(self):
-        
-        return self.model
-        
-        
     def build(self, input):
-        invert = Lambda(self.call, output_shape=self.getOutputShape)
+        invert = Lambda(self.call, output_shape=self.outputShape)
         output = invert(input)
         self.model = Model(input=input, output=output)
         
@@ -45,6 +40,6 @@ class Inverter(Module):
         return outputs
 
         
-    def getOutputShape(self, inputShape):
+    def outputShape(self, inputShape):
         
         return inputShape

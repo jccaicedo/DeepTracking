@@ -9,13 +9,13 @@ import numpy as NP
 
 class SequenceProcessor(object):
     
-    def before(self, frame, position):
-        if len(position.shape) < 3:
-            position = NP.expand_dims(position, axis=1)
+    def before(self, input, output):
+        if len(output.shape) < 3:
+            output = NP.expand_dims(output, axis=1)
             
-        return [frame[0], position]
+        return input  + [output, ]
 
     
-    def after(self, position):
+    def after(self, output):
         
-        return position
+        return output

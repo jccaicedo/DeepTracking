@@ -19,12 +19,8 @@ class GaussianAttention(Module):
         
         self.epsilon = epsilon
         self.alpha = alpha
-        output = merge(input, mode=self.call, output_shape=self.getOutputShape)
+        output = merge(input, mode=self.call, output_shape=self.outputShape)
         self.model = Model(input=input, output=output)
-    
-    
-    def getModel(self):
-        return self.model
     
     
     def call(self, X):
@@ -61,7 +57,7 @@ class GaussianAttention(Module):
         return output
         
         
-    def getOutputShape(self, inputShapes):
+    def outputShape(self, inputShapes):
         frameShape = inputShapes[0]
         
         return frameShape

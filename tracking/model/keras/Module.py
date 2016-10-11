@@ -21,4 +21,9 @@ class Module(object):
     
     def getModel(self):
         
-        return None
+        return self.model
+        
+    
+    def getOutputShape(self):
+        
+        return self.model.output_shape

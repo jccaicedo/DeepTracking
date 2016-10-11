@@ -23,11 +23,6 @@ class Rnn(Module):
         self.model = Model(input=input, output=output)
         
     
-    def getModel(self):
-        
-        return self.model
-        
-    
     def setTrainable(self, trainable):
         for layer in self.model.layers:
             layer.trainable = trainable
