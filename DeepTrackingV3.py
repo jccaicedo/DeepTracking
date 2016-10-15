@@ -97,7 +97,7 @@ batchSize = 128
 # In[4]:
 
 # LOGGING VARIABLES
-logFilePath = "/mnt/data/logs/" + trackerName + ".log"
+logFilePath = "/home/ubuntu/tracking/data/log/" + trackerName + ".log"
 logFormat = "%(asctime)s:%(levelname)s:%(funcName)s:%(lineno)d:%(message)s"
 logDateFormat = "%H:%M:%S"
 logLevel = logging.INFO
@@ -169,7 +169,7 @@ targetDim = positionRepresentation.getTargetDim()
 stateDim = 256
 
 # TRACKER VARIABLES
-lnr = 0.00001
+lnr = 0.001
 lnrdy = 0.1
 momentum = 0.95
 loss = "mae"
@@ -217,6 +217,7 @@ inputs = [frameInp, positionInp]
 
 # ATTENTION CONFIGURATION
 att = SquareAttention(inputs, alpha, scale)
+#att = SpatialTransformer(inputs, downsampleFactor=1)
 
 # INVERTER CONFIGURATION
 #inverter = Inverter(thetaInp)
@@ -273,7 +274,7 @@ tracker.build()
 
 offEpochs = 12
 offBatches = 10
-trackerModelPath = "/mnt/data/Models/"+ trackerName + ".pkl"
+trackerModelPath = "//home/ubuntu/tracking/data/Models/"+ trackerName + ".pkl"
 votDataSetPaths = ["/home/ubuntu/tracking/data/Datasets/votDataset10Fms50Seqs.pkl", "/home/ubuntu/tracking/data/Datasets/votDataset10Fms100Seqs.pkl"]
 
 

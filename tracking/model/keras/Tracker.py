@@ -108,12 +108,14 @@ class LossHistory(Callback):
     def __init__(self, validator, tracker):
         self.validator = validator
         self.tracker = tracker
+        self.epoch = 0
 
 
     def on_batch_end(self, batch, logs={}):
         loss = logs.get('loss')
-        logging.info("Batch Loss: Epoch = %d, batch = %d, loss = %f", 0, batch, loss)
+        logging.info("Batch Loss: Epoch = %d, batch = %d, loss = %f", self.epoch, batch, loss)
         
         
     def on_epoch_end(self, epoch, logs={}):
         self.validator.validateEpoch(self.tracker)
+        self.epoch += 1
