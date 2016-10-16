@@ -58,9 +58,11 @@ class Tracker(Tracker):
         model = Model(input=self.input, output=output)
         model.compile(optimizer=self.optimizer, loss=self.loss)
         self.model = model
+        print self.model.summary()
         
         
     def train(self, generator, epochs, batches, batchSize, validator):
+        self.generator = generator
         history = LossHistory(validator, self)
         spe = batches * batchSize
         self.model.fit_generator(generator, nb_epoch=epochs, samples_per_epoch=spe, verbose=0, callbacks=[history])
@@ -114,8 +116,26 @@ class LossHistory(Callback):
     def on_batch_end(self, batch, logs={}):
         loss = logs.get('loss')
         logging.info("Batch Loss: Epoch = %d, batch = %d, loss = %f", self.epoch, batch, loss)
-        
+        '''from keras import backend as K
+        get_activations = K.function([self.model.layers[0].input, self.model.layers[1].input],[self.model.layers[2].get_output_at(0)])
+        import cPickle as pickle
+        sample = pickle.load(open("/home/ubuntu/tracking/data/debug_batch.pkl","r"))
+        activations = get_activations(sample) 
+        with open("/home/ubuntu/tracking/data/debug_act.pkl", "wb") as out:
+            pickle.dump(activations, out)'''
+        from keras import backend as K
+        print self.model.layers
+        activations = K.function([self.model.layers[1].input, self.model.layers[0].input],[self.model.layers[3].get_output_at(1)])
+
+        import cPickle as pickle
+        sample = pickle.load(open("/home/ubuntu/tracking/data/debug_batch.pkl","r"))
+        activations = activations(sample)
+        with open("/home/ubuntu/tracking/data/debug_trans.pkl", "wb") as out:
+            pickle.dump(activations, out)
+
         
     def on_epoch_end(self, epoch, logs={}):
         self.validator.validateEpoch(self.tracker)
         self.epoch += 1
+        print sample[0].shape
+        print sample[0].shape

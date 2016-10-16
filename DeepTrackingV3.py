@@ -154,7 +154,7 @@ validator = Validator([valF[:, 1:, ...]], valP, batchSize, measure)
 # In[7]:
 
 # ATT VARIABLES
-alpha = 0.8
+alpha = 0.1
 scale = 1.0
 epsilon = 0.05
 
@@ -187,7 +187,7 @@ downsampleFactor = 1.0
 class Builder(object):
     
     def build(self, input, modules):
-        out = modules["attention"].getModel()(input)
+        out = modules["cropper"].getModel()([input[0], modules["beeper"].getModel()(input[1])])
         out = modules["cnn"].getModel()(out)
         out = modules["rnn"].getModel()(out)
         out = modules["regressor"].getModel()(out)
@@ -196,7 +196,6 @@ class Builder(object):
 
 step = SequenceProcessor()
 builder = Builder()
-
 
 # ## TRACKER CONFIGURATION
 
@@ -208,22 +207,22 @@ optimizer = RMSprop(lr=lnr)
 # INPUT CONFIGURATION
 frameInp = Input(shape=(None, ) + frameDims)
 positionInp = Input(shape=(None, 4))
-#thetaInp = Input(shape=(None, 3, 3))
+thetaInp = Input(shape=(None, 3, 3))
 inputs = [frameInp, positionInp]
 
 # CROP CONFIGURATION
-#beeper = Beeper(positionInp, distortion, minSide, context)
-#cropper = SpatialTransformer([frameInp, thetaInp], downsampleFactor)
+beeper = Beeper(positionInp, distortion, minSide, context)
+cropper = SpatialTransformer([frameInp, thetaInp], downsampleFactor)
 
 # ATTENTION CONFIGURATION
-att = SquareAttention(inputs, alpha, scale)
+#att = SquareAttention(inputs, alpha, scale)
 #att = SpatialTransformer(inputs, downsampleFactor=1)
 
 # INVERTER CONFIGURATION
-#inverter = Inverter(thetaInp)
+inverter = Inverter(thetaInp)
 
 # TRANSFORMER CONFIGURATION
-#transformer = Transformer([positionInp, thetaInp])
+transformer = Transformer([positionInp, thetaInp])
 
 # CNN CONFIGURATION
 frame = Input(shape=frameDims)
@@ -261,7 +260,8 @@ reg = Dense(targetDim, activation=regAct, input_dim=regInputShape[-1])
 regressor = Regressor([reg])
 
 # TRACKER CONFIGURATION
-modules = {"attention":att, "cnn":cnn, "rnn":rnn, "regressor":regressor}
+#modules = {"attention":att, "cnn":cnn, "rnn":rnn, "regressor":regressor}
+modules = {"beeper":beeper, "cropper": cropper, "inverter":inverter, "cnn":cnn, "rnn":rnn, "regressor":regressor}
 tracker = Tracker(inputs, modules, builder, optimizer, loss, step, timeSize)
 tracker.build()
 
@@ -272,8 +272,8 @@ tracker.build()
 
 # In[10]:
 
-offEpochs = 12
-offBatches = 10
+offEpochs = 1
+offBatches = 3
 trackerModelPath = "//home/ubuntu/tracking/data/Models/"+ trackerName + ".pkl"
 votDataSetPaths = ["/home/ubuntu/tracking/data/Datasets/votDataset10Fms50Seqs.pkl", "/home/ubuntu/tracking/data/Datasets/votDataset10Fms100Seqs.pkl"]
 
@@ -288,6 +288,9 @@ def trainGenerator():
         frame, position = processor.preprocess(frame, position)
         cropPosition = NP.roll(position, 1, axis=1) # Shift the time
         cropPosition[:, 0, :] = cropPosition[:, 1, :] # First frame is ground truth
+        #import cPickle as pickle
+        #with open("/home/ubuntu/tracking/data/debug_batch.pkl", "wb") as out:
+        #    pickle.dump([frame, cropPosition], out)
         
         yield [frame, cropPosition], position
 
